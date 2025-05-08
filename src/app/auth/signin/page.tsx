@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { FirebaseError } from "firebase/app";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -88,8 +89,11 @@ export default function SignIn() {
             setError("Failed to sign in after registration");
             return;
           }
-        } catch (err: any) {
-          if (err.code === "auth/email-already-in-use") {
+        } catch (err: unknown) {
+          if (
+            err instanceof FirebaseError &&
+            err.code === "auth/email-already-in-use"
+          ) {
             setError(
               "This email is already registered. Please sign in instead."
             );
@@ -112,14 +116,23 @@ export default function SignIn() {
       }
 
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Auth error:", err);
-      if (err.code === "auth/email-already-in-use") {
+      if (
+        err instanceof FirebaseError &&
+        err.code === "auth/email-already-in-use"
+      ) {
         setError("This email is already registered. Please sign in instead.");
         setIsSignUp(false);
-      } else if (err.code === "auth/invalid-email") {
+      } else if (
+        err instanceof FirebaseError &&
+        err.code === "auth/invalid-email"
+      ) {
         setError("Please enter a valid email address.");
-      } else if (err.code === "auth/weak-password") {
+      } else if (
+        err instanceof FirebaseError &&
+        err.code === "auth/weak-password"
+      ) {
         setError("Password should be at least 6 characters long.");
       } else {
         setError(isSignUp ? "Failed to create account" : "Failed to sign in");
